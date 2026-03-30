@@ -2,22 +2,28 @@
 
 import { motion } from "framer-motion";
 import { CheckCircle, AlertCircle, Loader2, Download } from "lucide-react";
-import type { FileProgress } from "../../lib/job-queue";
+
+export interface LocalFileProgress {
+  filename: string;
+  originalName: string;
+  status: "pending" | "processing" | "done" | "error";
+  progress: number;
+  error?: string;
+  outputFilename?: string;
+  downloadUrl?: string;
+}
 
 interface FileCardProps {
-  file: FileProgress;
-  jobId: string;
+  file: LocalFileProgress;
   index: number;
 }
 
-export default function FileCard({ file, jobId, index }: FileCardProps) {
+export default function FileCard({ file, index }: FileCardProps) {
   const isDone = file.status === "done";
   const isError = file.status === "error";
   const isProcessing = file.status === "processing";
 
-  const downloadUrl = isDone && file.outputFilename
-    ? `/api/download/${jobId}?file=${encodeURIComponent(file.outputFilename)}`
-    : null;
+  const downloadUrl = file.downloadUrl || null;
 
   return (
     <motion.div
@@ -91,7 +97,7 @@ export default function FileCard({ file, jobId, index }: FileCardProps) {
         </div>
 
         {/* Download button */}
-        {downloadUrl && (
+        {downloadUrl && file.outputFilename && (
           <a
             href={downloadUrl}
             download={file.outputFilename}

@@ -1,54 +1,65 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileMinus, Scissors, Download, RefreshCw, CheckCircle, AlertCircle, Info } from "lucide-react";
 import DropZone from "@/components/ui/DropZone";
-import { splitPDFAction, getPDFJobStatusAction } from "@/actions/pdf-actions";
 import { toast } from "@/components/ui/Toast";
-import type { Job, FileProgress } from "@/lib/job-queue";
 
 export default function PDFSplitPage() {
   const [file, setFile] = useState<File | null>(null);
   const [ranges, setRanges] = useState("");
   const [splitAll, setSplitAll] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [job, setJob] = useState<Job | null>(null);
-  const [jobId, setJobId] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
   const handleFiles = useCallback((incoming: File[]) => {
     if (incoming[0]) setFile(incoming[0]);
   }, []);
 
-  const handleReset = () => { setFile(null); setRanges(""); setJob(null); setJobId(null); setIsSubmitting(false); };
-
-  const poll = (id: string) => {
-    const interval = setInterval(async () => {
-      const status = await getPDFJobStatusAction(id);
-      if (status) { setJob(status); if (status.status === "done" || status.status === "error") { clearInterval(interval); if (status.status === "done") toast(`Split into ${status.files.length} part(s)!`, "success"); } }
-    }, 800);
+  const handleReset = () => { 
+    if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+    setFile(null); 
+    setRanges(""); 
+    setDownloadUrl(null); 
+    setIsSubmitting(false); 
   };
 
   const handleSplit = async () => {
     if (!file) return;
     setIsSubmitting(true);
+    if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+    setDownloadUrl(null);
+
     try {
       const formData = new FormData();
+      formData.append("action", "split");
       formData.append("file", file);
       formData.append("ranges", splitAll ? "" : ranges);
-      const result = await splitPDFAction(formData);
-      setJobId(result.jobId);
-      setJob({ id: result.jobId, type: "pdf-split", status: "processing", files: [], createdAt: Date.now() });
-      poll(result.jobId);
-      toast("Splitting PDF…", "info");
+
+      const res = await fetch("/api/process-pdf", { method: "POST", body: formData });
+      if (!res.ok) {
+        const errData = await res.json().catch(()=>({}));
+        throw new Error(errData.error || "Network error");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setDownloadUrl(url);
+
+      toast("PDF split into zip file successfully!", "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Split failed", "error");
+    } finally {
       setIsSubmitting(false);
     }
   };
 
-  const allDone = job?.status === "done";
-  const hasError = job?.status === "error";
+  useEffect(() => {
+    return () => {
+      if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+    };
+  }, [downloadUrl]);
 
   return (
     <div className="p-8 max-w-3xl mx-auto space-y-8">
@@ -63,7 +74,7 @@ export default function PDFSplitPage() {
       </div>
 
       <AnimatePresence mode="wait">
-        {!job && (
+        {!downloadUrl && !isSubmitting && (
           <motion.div key="config" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
             <DropZone
               onFiles={handleFiles}
@@ -118,41 +129,32 @@ export default function PDFSplitPage() {
           </motion.div>
         )}
 
-        {job && (
-          <motion.div key="result" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-            <div className={`rounded-xl p-5 border ${
-              allDone ? "bg-accent-emerald/10 border-accent-emerald/30" :
-              hasError ? "bg-accent-rose/10 border-accent-rose/30" :
-              "bg-surface-2 border-border-subtle"
-            }`}>
-              {allDone ? (
-                <div className="flex items-center gap-3 mb-4">
-                  <CheckCircle className="w-5 h-5 text-accent-emerald" />
-                  <p className="text-sm font-medium text-white">Split into <span className="text-accent-emerald">{job.files.length}</span> file(s)</p>
-                  {jobId && (
-                    <a href={`/api/download/${jobId}`} download className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent-emerald/20 text-accent-emerald text-xs font-medium hover:bg-accent-emerald/30 transition-colors">
-                      <Download className="w-3 h-3" /> Download All
-                    </a>
-                  )}
-                </div>
-              ) : hasError ? (
-                <div className="flex items-center gap-2 text-accent-rose text-sm"><AlertCircle className="w-4 h-4" /> {job.error}</div>
-              ) : (
-                <div className="flex items-center gap-3 text-white/60 text-sm"><RefreshCw className="w-4 h-4 animate-spin text-accent-emerald" /> Splitting PDF…</div>
-              )}
+        {isSubmitting && !downloadUrl && (
+          <motion.div key="progress" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+             <div className="rounded-xl p-5 border bg-surface-2 border-border-subtle flex flex-col items-center gap-3">
+               <RefreshCw className="w-8 h-8 animate-spin text-accent-emerald" />
+               <p className="text-sm text-white/60">Splitting and generating ZIP archive…</p>
+             </div>
+          </motion.div>
+        )}
 
-              {allDone && (
-                <div className="space-y-2 mt-2">
-                  {job.files.map((f: FileProgress) => (
-                    <div key={f.filename} className="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-2">
-                      <span className="text-xs text-white/70 font-medium">{f.outputFilename ?? f.filename}</span>
-                      {jobId && f.outputFilename && (
-                        <a href={`/api/download/${jobId}?file=${encodeURIComponent(f.outputFilename)}`} download={f.outputFilename} className="text-[10px] px-2 py-1 rounded bg-accent-emerald/20 text-accent-emerald hover:bg-accent-emerald/30 transition-colors">Download</a>
-                      )}
-                    </div>
-                  ))}
+        {downloadUrl && (
+          <motion.div key="result" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+            <div className="rounded-xl p-8 border bg-accent-emerald/10 border-accent-emerald/30 flex flex-col items-center gap-4 text-center">
+                <div className="w-14 h-14 rounded-full bg-accent-emerald/20 flex items-center justify-center">
+                  <CheckCircle className="w-7 h-7 text-accent-emerald" />
                 </div>
-              )}
+                <div>
+                   <p className="text-base font-semibold text-white">Split Complete!</p>
+                   <p className="text-xs text-white/40 mt-1">Your split PDFs are packaged together securely.</p>
+                </div>
+                <a 
+                   href={downloadUrl} 
+                   download="splitted_files.zip" 
+                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-accent-emerald text-white text-sm font-semibold hover:bg-emerald-400 transition-colors shadow-glow-emerald"
+                >
+                  <Download className="w-4 h-4" /> Download ZIP
+                </a>
             </div>
             <button onClick={handleReset} className="w-full py-2.5 rounded-xl border border-border text-white/50 hover:text-white text-sm font-medium transition-colors">Split Another PDF</button>
           </motion.div>

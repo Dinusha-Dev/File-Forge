@@ -1,24 +1,21 @@
-// Force IDE cache refresh
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageIcon, Wand2, Download, RefreshCw, AlertCircle } from "lucide-react";
 import DropZone from "../../components/ui/DropZone";
 import FormatSelector from "../../components/ui/FormatSelector";
-import FileCard from "../../components/ui/FileCard";
+import FileCard, { LocalFileProgress } from "../../components/ui/FileCard";
 import { ImageFormat } from "../../lib/converter";
-import { convertImagesAction, getImageJobStatusAction } from "../../actions/image-actions";
 import { toast } from "../../components/ui/Toast";
-import type { Job, FileProgress } from "../../lib/job-queue";
+import JSZip from "jszip";
 
 export default function ConvertPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [targetFormat, setTargetFormat] = useState<ImageFormat>("webp");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [job, setJob] = useState<Job | null>(null);
-  const [jobId, setJobId] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [jobStatus, setJobStatus] = useState<"idle" | "processing" | "done" | "error">("idle");
+  const [fileProgresses, setFileProgresses] = useState<LocalFileProgress[]>([]);
 
   const handleFiles = useCallback((incoming: File[]) => {
     setFiles((prev) => {
@@ -31,30 +28,41 @@ export default function ConvertPage() {
     setFiles((prev) => prev.filter((_, i) => i !== index));
 
   const handleReset = () => {
-    if (pollRef.current) clearInterval(pollRef.current);
+    fileProgresses.forEach(fp => {
+      if (fp.downloadUrl) URL.revokeObjectURL(fp.downloadUrl);
+    });
     setFiles([]);
-    setJob(null);
-    setJobId(null);
+    setJobStatus("idle");
+    setFileProgresses([]);
     setIsSubmitting(false);
   };
 
-  const startPolling = (id: string) => {
-    pollRef.current = setInterval(async () => {
-      const status = await getImageJobStatusAction(id);
-      if (status) {
-        setJob(status);
-        if (status.status === "done" || status.status === "error") {
-          clearInterval(pollRef.current!);
-          if (status.status === "done") toast("All files converted successfully!", "success");
-          else toast("Some files failed to convert.", "error");
+  const handleDownloadAll = async () => {
+    try {
+      toast("Zipping files...", "info");
+      const zip = new JSZip();
+      for (const fp of fileProgresses) {
+        if (fp.status === "done" && fp.downloadUrl) {
+          const res = await fetch(fp.downloadUrl);
+          const blob = await res.blob();
+          zip.file(fp.outputFilename || "file", blob);
         }
       }
-    }, 800);
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(zipBlob);
+      a.download = "converted_images.zip";
+      a.click();
+      toast("Downloaded successfully!", "success");
+    } catch {
+      toast("Failed to zip files", "error");
+    }
   };
 
   const handleConvert = async () => {
     if (files.length === 0) return;
     setIsSubmitting(true);
+    setJobStatus("processing");
 
     // Client-side HEIC pre-conversion
     const processedFiles: File[] = [];
@@ -74,38 +82,68 @@ export default function ConvertPage() {
       }
     }
 
-    try {
-      const formData = new FormData();
-      processedFiles.forEach((f) => formData.append("files", f));
-      formData.append("targetFormat", targetFormat);
+    const initialProgresses: LocalFileProgress[] = processedFiles.map((f, i) => ({
+      filename: `file_${i}`,
+      originalName: f.name,
+      status: "pending",
+      progress: 0,
+    }));
+    setFileProgresses(initialProgresses);
 
-      const result = await convertImagesAction(formData);
-      setJobId(result.jobId);
+    let hasError = false;
 
-      // Seed initial job state
-      setJob({
-        id: result.jobId,
-        type: "image-convert",
-        status: "processing",
-        files: processedFiles.map((f, i) => ({
-          filename: `file_${i}`,
-          originalName: f.name,
-          status: "pending",
-          progress: 0,
-        })),
-        createdAt: Date.now(),
+    // Process files sequentially one by one to avoid overwhelming serverless limits
+    for (let i = 0; i < processedFiles.length; i++) {
+      const f = processedFiles[i];
+      setFileProgresses(prev => {
+        const next = [...prev];
+        next[i] = { ...next[i], status: "processing", progress: 50 };
+        return next;
       });
 
-      startPolling(result.jobId);
-      toast(`Started converting ${result.fileCount} files…`, "info");
-    } catch (err) {
-      toast(err instanceof Error ? err.message : "Conversion failed", "error");
-      setIsSubmitting(false);
+      try {
+        const formData = new FormData();
+        formData.append("file", f);
+        formData.append("targetFormat", targetFormat);
+
+        const res = await fetch("/api/process-image", { method: "POST", body: formData });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${res.status}`);
+        }
+
+        const outFilenameHeader = res.headers.get("X-Output-Filename");
+        const outFilename = outFilenameHeader 
+          ? decodeURIComponent(outFilenameHeader) 
+          : `${f.name.replace(/\.[^.]+$/, "")}.${targetFormat}`;
+
+        const blob = await res.blob();
+        const downloadUrl = URL.createObjectURL(blob);
+
+        setFileProgresses(prev => {
+          const next = [...prev];
+          next[i] = { ...next[i], status: "done", progress: 100, outputFilename: outFilename, downloadUrl };
+          return next;
+        });
+      } catch (err) {
+        hasError = true;
+        setFileProgresses(prev => {
+          const next = [...prev];
+          next[i] = { ...next[i], status: "error", progress: 0, error: err instanceof Error ? err.message : "Failed" };
+          return next;
+        });
+      }
     }
+
+    setJobStatus(hasError ? "error" : "done");
+    setIsSubmitting(false);
+
+    if (hasError) toast("Some files failed to convert.", "error");
+    else toast("All files converted successfully!", "success");
   };
 
-  const allDone = job?.status === "done";
-  const hasError = job?.status === "error";
+  const allDone = jobStatus === "done";
+  const hasError = jobStatus === "error";
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-8">
@@ -124,7 +162,7 @@ export default function ConvertPage() {
 
       {/* Config panel */}
       <AnimatePresence mode="wait">
-        {!job && (
+        {jobStatus === "idle" && (
           <motion.div
             key="config"
             initial={{ opacity: 0, y: 10 }}
@@ -161,7 +199,7 @@ export default function ConvertPage() {
           </motion.div>
         )}
 
-        {job && (
+        {jobStatus !== "idle" && (
           <motion.div
             key="progress"
             initial={{ opacity: 0, y: 10 }}
@@ -177,15 +215,12 @@ export default function ConvertPage() {
                 <>
                   <div className="w-2 h-2 rounded-full bg-accent-emerald animate-pulse-slow" />
                   <span className="text-sm font-medium text-accent-emerald">All files converted successfully!</span>
-                  {jobId && (
-                    <a
-                      href={`/api/download/${jobId}`}
-                      download
-                      className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent-emerald/20 hover:bg-accent-emerald/30 text-accent-emerald text-xs font-medium transition-colors"
-                    >
-                      <Download className="w-3 h-3" /> Download All
-                    </a>
-                  )}
+                  <button
+                    onClick={handleDownloadAll}
+                    className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent-emerald/20 hover:bg-accent-emerald/30 text-accent-emerald text-xs font-medium transition-colors"
+                  >
+                    <Download className="w-3 h-3" /> Download All
+                  </button>
                 </>
               ) : hasError ? (
                 <>
@@ -197,7 +232,7 @@ export default function ConvertPage() {
                   <RefreshCw className="w-4 h-4 text-accent-violet-light animate-spin" />
                   <span className="text-sm text-white/60">Processing files…</span>
                   <span className="ml-auto text-xs text-white/30">
-                    {job.files.filter((f: { status: string }) => f.status === "done").length} / {job.files.length} done
+                    {fileProgresses.filter((f) => f.status === "done").length} / {fileProgresses.length} done
                   </span>
                 </>
               )}
@@ -205,8 +240,8 @@ export default function ConvertPage() {
 
             {/* File cards */}
             <div className="space-y-2">
-              {job.files.map((file: FileProgress, i: number) => (
-                <FileCard key={file.filename} file={file} jobId={job.id} index={i} />
+              {fileProgresses.map((file, i) => (
+                <FileCard key={file.filename} file={file} index={i} />
               ))}
             </div>
 

@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GripVertical as GripIcon, Save, Download, RefreshCw, CheckCircle, AlertCircle, Plus } from "lucide-react";
 import DropZone from "../../../components/ui/DropZone";
 import PageOrganizer, { PageGroup, PageItem } from "../../../components/pdf/PageOrganizer";
-import { advancedReorderAction, getPDFJobStatusAction } from "../../../actions/pdf-actions";
 import { toast } from "../../../components/ui/Toast";
-import type { Job } from "../../../lib/job-queue";
 import { v4 as uuidv4 } from "uuid";
 
 interface SourceFile {
@@ -23,8 +21,7 @@ export default function PDFOrganizePage() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [job, setJob] = useState<Job | null>(null);
-  const [jobId, setJobId] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
   const handleFiles = useCallback(async (incoming: File[]) => {
     if (incoming.length === 0) return;
@@ -94,32 +91,21 @@ export default function PDFOrganizePage() {
   }, []);
 
   const handleReset = () => {
+    if (downloadUrl) URL.revokeObjectURL(downloadUrl);
     setSourceFiles([]);
     setPdfDataMap({});
     setGroups([]);
-    setJob(null);
-    setJobId(null);
+    setDownloadUrl(null);
     setIsSubmitting(false);
-  };
-
-  const poll = (id: string) => {
-    const interval = setInterval(async () => {
-      const status = await getPDFJobStatusAction(id);
-      if (status) {
-        setJob(status);
-        if (status.status === "done" || status.status === "error") {
-          clearInterval(interval);
-          if (status.status === "done") toast("Master PDF compiled & saved!", "success");
-          else toast("Compilation failed: " + status.error, "error");
-        }
-      }
-    }, 800);
   };
 
   const handleSave = async () => {
     const totalPages = groups.reduce((acc, g) => acc + g.pages.filter(p => !p.isDisabled).length, 0);
     if (sourceFiles.length === 0 || totalPages === 0) return;
     setIsSubmitting(true);
+    if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+    setDownloadUrl(null);
+
     try {
       // Flatten the grid arrays sequentially from top box to bottom box, EXCLUDING disabled pages!
       const layout: { fileIndex: number, pageIndex: number }[] = [];
@@ -135,22 +121,34 @@ export default function PDFOrganizePage() {
       });
       
       const formData = new FormData();
+      formData.append("action", "advanced-reorder");
       sourceFiles.forEach(sf => formData.append("files", sf.file));
       formData.append("layout", JSON.stringify(layout));
 
-      const result = await advancedReorderAction(formData);
-      setJobId(result.jobId);
-      setJob({ id: result.jobId, type: "pdf-reorder", status: "processing", files: [], createdAt: Date.now() });
-      poll(result.jobId);
-      toast("Compiling master PDF…", "info");
+      const res = await fetch("/api/process-pdf", { method: "POST", body: formData });
+      if (!res.ok) {
+        const errData = await res.json().catch(()=>({}));
+        throw new Error(errData.error || "Compilation failed");
+      }
+      
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setDownloadUrl(url);
+
+      toast("Master PDF compiled successfully!", "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Save failed", "error");
+    } finally {
       setIsSubmitting(false);
     }
   };
 
-  const allDone = job?.status === "done";
-  const hasError = job?.status === "error";
+  useEffect(() => {
+    return () => {
+      if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+    };
+  }, [downloadUrl]);
+
   const totalPagesCount = groups.reduce((acc, g) => acc + g.pages.filter(p => !p.isDisabled).length, 0);
 
   return (
@@ -163,7 +161,7 @@ export default function PDFOrganizePage() {
           <h1 className="text-lg font-bold text-white">Advanced PDF Organizer</h1>
           <p className="text-xs text-white/40">Combine files manually by dragging pages seamlessly between Document groups</p>
         </div>
-        {groups.length > 0 && !job && (
+        {groups.length > 0 && !downloadUrl && (
           <div className="ml-auto flex items-center gap-2">
             <button
               disabled={isSubmitting || totalPagesCount === 0}
@@ -197,7 +195,7 @@ export default function PDFOrganizePage() {
           </motion.div>
         )}
 
-        {sourceFiles.length > 0 && !isLoading && !job && (
+        {sourceFiles.length > 0 && !isLoading && !downloadUrl && (
           <motion.div key="organizer" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             
             {/* Top Toolbar Area for Multi-File Context */}
@@ -237,15 +235,18 @@ export default function PDFOrganizePage() {
           </motion.div>
         )}
 
-        {job && (
+        {isSubmitting && !downloadUrl && (
+          <motion.div key="compile-progress" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+            <div className={`rounded-2xl p-8 border flex flex-col items-center gap-4 text-center bg-surface-2 border-border-subtle`}>
+               <RefreshCw className="w-10 h-10 text-rose-400 animate-spin" />
+               <p className="text-sm text-white/60">Compiling and merging pages into memory buffer…</p>
+            </div>
+          </motion.div>
+        )}
+
+        {downloadUrl && (
           <motion.div key="result" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-            <div className={`rounded-2xl p-8 border flex flex-col items-center gap-4 text-center ${
-              allDone ? "bg-accent-rose/10 border-accent-rose/30" :
-              hasError ? "bg-accent-rose/10 border-accent-rose/40" :
-              "bg-surface-2 border-border-subtle"
-            }`}>
-              {allDone ? (
-                <>
+            <div className="rounded-2xl p-8 border bg-accent-rose/10 border-accent-rose/30 flex flex-col items-center gap-4 text-center shadow-glow-rose">
                   <div className="w-14 h-14 rounded-full bg-rose-500/20 flex items-center justify-center shadow-glow-rose">
                     <CheckCircle className="w-7 h-7 text-rose-400" />
                   </div>
@@ -253,27 +254,13 @@ export default function PDFOrganizePage() {
                     <p className="text-base font-semibold text-white">Master PDF Compiled!</p>
                     <p className="text-xs text-white/40 mt-1">Ready for download.</p>
                   </div>
-                  {jobId && (
-                    <a
-                      href={`/api/download/${jobId}?file=organized.pdf`}
-                      download="organized.pdf"
-                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 text-white text-sm font-semibold hover:opacity-90 shadow-glow-rose transition-opacity"
-                    >
-                      <Download className="w-4 h-4" /> Download Final PDF
-                    </a>
-                  )}
-                </>
-              ) : hasError ? (
-                <>
-                  <AlertCircle className="w-10 h-10 text-accent-rose" />
-                  <p className="text-sm text-accent-rose">{job.error ?? "Compilation failed"}</p>
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-10 h-10 text-rose-400 animate-spin" />
-                  <p className="text-sm text-white/60">Compiling and merging pages…</p>
-                </>
-              )}
+                  <a
+                    href={downloadUrl}
+                    download="organized.pdf"
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 text-white text-sm font-semibold hover:opacity-90 shadow-glow-rose transition-opacity"
+                  >
+                    <Download className="w-4 h-4" /> Download Final PDF
+                  </a>
             </div>
             <button onClick={handleReset} className="w-full py-2.5 rounded-xl border border-border text-white/50 hover:text-white hover:border-white/20 text-sm font-medium transition-colors">
               Start New Session

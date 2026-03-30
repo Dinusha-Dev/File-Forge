@@ -4,9 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileStack, Merge, Download, RefreshCw, AlertCircle, CheckCircle, X, Plus } from "lucide-react";
 import DropZone from "../../../components/ui/DropZone";
-import { mergePDFsAction, getPDFJobStatusAction } from "../../../actions/pdf-actions";
 import { toast } from "../../../components/ui/Toast";
-import type { Job } from "../../../lib/job-queue";
 import { v4 as uuidv4 } from "uuid";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import PageThumbnail from "../../../components/pdf/PageThumbnail";
@@ -24,8 +22,7 @@ export default function PDFMergePage() {
   const [files, setFiles] = useState<MergeFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [job, setJob] = useState<Job | null>(null);
-  const [jobId, setJobId] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
   const handleFiles = useCallback(async (incoming: File[]) => {
     if (incoming.length === 0) return;
@@ -37,8 +34,6 @@ export default function PDFMergePage() {
 
       for (const f of incoming) {
         const ab = await f.arrayBuffer();
-
-        // Fast-load the Document just to extract the page count memory footprint
         const doc = await PDFDocument.load(ab, { ignoreEncryption: true });
 
         parsedFiles.push({
@@ -64,41 +59,37 @@ export default function PDFMergePage() {
   }, []);
 
   const handleReset = () => {
+    if (downloadUrl) URL.revokeObjectURL(downloadUrl);
     setFiles([]);
-    setJob(null);
-    setJobId(null);
+    setDownloadUrl(null);
     setIsSubmitting(false);
-  };
-
-  const poll = (id: string) => {
-    const interval = setInterval(async () => {
-      const status = await getPDFJobStatusAction(id);
-      if (status) {
-        setJob(status);
-        if (status.status === "done" || status.status === "error") {
-          clearInterval(interval);
-          if (status.status === "done") toast("PDFs merged successfully!", "success");
-          else toast("Merge failed: " + status.error, "error");
-        }
-      }
-    }, 800);
   };
 
   const handleMerge = async () => {
     if (files.length < 2) { toast("Please add at least 2 PDF files", "error"); return; }
     setIsSubmitting(true);
+    if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+    setDownloadUrl(null);
+    
     try {
       const formData = new FormData();
-      // Appending strictly in their visual reordered sequence!
+      formData.append("action", "merge");
       files.forEach((f) => formData.append("files", f.file));
 
-      const result = await mergePDFsAction(formData);
-      setJobId(result.jobId);
-      setJob({ id: result.jobId, type: "pdf-merge", status: "processing", files: [], createdAt: Date.now() });
-      poll(result.jobId);
-      toast(`Merging ${files.length} PDFs…`, "info");
+      const res = await fetch("/api/process-pdf", { method: "POST", body: formData });
+      if (!res.ok) {
+        const errData = await res.json().catch(()=>({}));
+        throw new Error(errData.error || "Upload rejected");
+      }
+      
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setDownloadUrl(url);
+      
+      toast(`Merged ${files.length} PDFs successfully!`, "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Merge failed", "error");
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -111,13 +102,12 @@ export default function PDFMergePage() {
     setFiles(reorderedFiles);
   }, [files]);
 
-  const allDone = job?.status === "done";
-  const hasError = job?.status === "error";
-
-  // Prevent memory leaks for blob/array buffers indirectly if components unmount
   useEffect(() => {
-    return () => setFiles([]);
-  }, []);
+    return () => {
+       if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+       setFiles([]);
+    };
+  }, [downloadUrl]);
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-8">
@@ -130,7 +120,7 @@ export default function PDFMergePage() {
           <p className="text-xs text-white/40">Combine multiple PDFs into a single document visually</p>
         </div>
 
-        {!job && files.length >= 2 && (
+        {!downloadUrl && files.length >= 2 && (
           <div className="ml-auto">
             <button
               disabled={isSubmitting}
@@ -145,7 +135,7 @@ export default function PDFMergePage() {
       </div>
 
       <AnimatePresence mode="wait">
-        {!job && (
+        {!downloadUrl && !isSubmitting && (
           <motion.div key="config" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
             <DropZone
               onFiles={handleFiles}
@@ -153,7 +143,6 @@ export default function PDFMergePage() {
               multiple
               label="Drop PDF files here to merge"
               sublabel="Add 2 or more PDFs. You can visually reorder them below."
-            // Notice we purposely omit 'files={files}' so DropZone doesn't render its native list!
             />
 
             {isLoading && (
@@ -195,8 +184,8 @@ export default function PDFMergePage() {
                         ref={provided.innerRef}
                         {...provided.droppableProps}
                         className={`flex flex-wrap gap-6 p-6 rounded-2xl border-2 border-dashed min-h-[240px] transition-colors duration-300 ${snapshot.isDraggingOver
-                            ? "border-accent-cyan/50 bg-accent-cyan/5"
-                            : "border-border-subtle bg-surface-1"
+                          ? "border-accent-cyan/50 bg-accent-cyan/5"
+                          : "border-border-subtle bg-surface-1"
                           }`}
                       >
                         {files.map((file, index) => (
@@ -215,8 +204,8 @@ export default function PDFMergePage() {
                                   {/* Thumbnail Element */}
                                   <div
                                     className={`relative w-[120px] h-[170px] rounded-xl overflow-hidden border-2 transition-all duration-200 bg-surface-3 flex items-center justify-center ${dragSnapshot.isDragging
-                                        ? "border-accent-cyan shadow-glow-cyan rotate-3 scale-110"
-                                        : "border-border hover:border-accent-cyan/40"
+                                      ? "border-accent-cyan shadow-glow-cyan rotate-3 scale-110"
+                                      : "border-border hover:border-accent-cyan/40"
                                       }`}
                                   >
                                     <button
@@ -241,7 +230,6 @@ export default function PDFMergePage() {
                                     </div>
                                   </div>
 
-                                  {/* Label text directly below thumbnail */}
                                   <div className="flex flex-col items-center w-full px-1">
                                     <span className="text-xs font-medium text-white/90 w-full text-center truncate" title={file.name}>
                                       {file.name}
@@ -266,14 +254,18 @@ export default function PDFMergePage() {
           </motion.div>
         )}
 
-        {job && (
+        {isSubmitting && !downloadUrl && (
+          <motion.div key="progress" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+            <div className={`rounded-2xl p-8 border flex flex-col items-center gap-4 text-center bg-surface-2 border-border-subtle`}>
+               <RefreshCw className="w-10 h-10 text-accent-cyan animate-spin" />
+               <p className="text-sm text-white/60">Merging your PDFs sequentially…</p>
+            </div>
+          </motion.div>
+        )}
+
+        {downloadUrl && (
           <motion.div key="result" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-            <div className={`rounded-2xl p-8 border flex flex-col items-center gap-4 text-center ${allDone ? "bg-accent-emerald/10 border-accent-emerald/30" :
-                hasError ? "bg-accent-rose/10 border-accent-rose/30" :
-                  "bg-surface-2 border-border-subtle"
-              }`}>
-              {allDone ? (
-                <>
+            <div className={`rounded-2xl p-8 border flex flex-col items-center gap-4 text-center bg-accent-emerald/10 border-accent-emerald/30`}>
                   <div className="w-14 h-14 rounded-full bg-accent-emerald/20 flex items-center justify-center">
                     <CheckCircle className="w-7 h-7 text-accent-emerald" />
                   </div>
@@ -281,27 +273,13 @@ export default function PDFMergePage() {
                     <p className="text-base font-semibold text-white">Merge Complete!</p>
                     <p className="text-xs text-white/40 mt-1">Your merged PDF is ready to download.</p>
                   </div>
-                  {jobId && (
-                    <a
-                      href={`/api/download/${jobId}?file=merged.pdf`}
-                      download="merged.pdf"
-                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-accent-emerald text-white text-sm font-semibold hover:bg-emerald-400 transition-colors shadow-glow-emerald"
-                    >
-                      <Download className="w-4 h-4" /> Download Final PDF
-                    </a>
-                  )}
-                </>
-              ) : hasError ? (
-                <>
-                  <AlertCircle className="w-10 h-10 text-accent-rose" />
-                  <p className="text-sm text-accent-rose">{job.error ?? "Merge encountered an error"}</p>
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-10 h-10 text-accent-cyan animate-spin" />
-                  <p className="text-sm text-white/60">Merging your PDFs sequentially…</p>
-                </>
-              )}
+                  <a
+                    href={downloadUrl}
+                    download="merged.pdf"
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-accent-emerald text-white text-sm font-semibold hover:bg-emerald-400 transition-colors shadow-glow-emerald"
+                  >
+                     <Download className="w-4 h-4" /> Download Final PDF
+                  </a>
             </div>
             <button onClick={handleReset} className="w-full py-2.5 rounded-xl border border-border text-white/50 hover:text-white hover:border-white/20 text-sm font-medium transition-colors">
               Start New Session
