@@ -12,7 +12,7 @@ const titles: Record<string, { title: string; description: string }> = {
 
 export default function TopBar() {
   const pathname = usePathname();
-  const meta = titles[pathname] ?? { title: "FilForge", description: "Universal File Hub" };
+  const meta = titles[pathname] ?? { title: "File Forge", description: "Universal File Hub" };
 
   return (
     <header className="h-14 flex items-center px-6 border-b border-border-subtle bg-surface-1/50 backdrop-blur-sm sticky top-0 z-40">

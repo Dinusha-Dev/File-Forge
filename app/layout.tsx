@@ -12,7 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "FilForge — Universal File Hub",
+  title: "File Forge — Powered by Codewave Innovations",
   description:
     "Convert images in bulk, merge & split PDFs, and organize pages with drag-and-drop. Fast, private, no cloud storage.",
   keywords: ["image converter", "PDF merge", "PDF split", "bulk file converter", "file tools"],

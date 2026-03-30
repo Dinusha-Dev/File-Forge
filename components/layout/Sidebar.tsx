@@ -16,7 +16,8 @@ import {
   FileSpreadsheet,
   ScanText,
   Stamp,
-  Eraser
+  Eraser,
+  Anvil
 } from "lucide-react";
 
 const navItems = [
@@ -42,10 +43,10 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-border-subtle">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-violet to-accent-cyan flex items-center justify-center shadow-glow-violet">
-          <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
+          <Anvil className="w-4 h-4 text-white" strokeWidth={2.5} />
         </div>
         <div>
-          <span className="text-sm font-bold text-white tracking-tight">FilForge</span>
+          <span className="text-sm font-bold text-white tracking-tight">File Forge</span>
           <p className="text-[10px] text-white/40 leading-none mt-0.5">Universal File Hub</p>
         </div>
       </div>
@@ -88,11 +89,19 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-4 py-4 border-t border-border-subtle">
+      <div className="px-4 py-4 border-t border-border-subtle flex flex-col gap-4 mt-auto">
         <div className="rounded-lg bg-surface-3 border border-border-subtle p-3">
           <p className="text-[11px] text-white/40 leading-relaxed">
-            Files auto-deleted after <span className="text-accent-violet-light font-medium">1 hour</span>. Nothing is stored permanently.
+            Files processed locally in browser. Nothing is stored permanently.
           </p>
+        </div>
+        <div className="flex items-center justify-center pb-2">
+          <div className="text-center">
+            <span className="text-[9px] uppercase tracking-[0.15em] text-white/30 font-semibold">Powered by</span>
+            <p className="text-xs font-bold bg-clip-text text-transparent bg-gradient-to-r from-accent-cyan to-accent-violet tracking-wide mt-1">
+              Codewave Innovations
+            </p>
+          </div>
         </div>
       </div>
     </aside>
