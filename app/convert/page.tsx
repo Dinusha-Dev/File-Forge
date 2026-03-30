@@ -10,6 +10,46 @@ import { ImageFormat } from "../../lib/converter";
 import { toast } from "../../components/ui/Toast";
 import JSZip from "jszip";
 
+const compressImageLocally = async (file: File): Promise<File> => {
+  if (file.size < 4000000) return file;
+  if (!file.type.startsWith("image/") || file.type.includes("svg")) return file;
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+        const maxDim = 3000;
+        
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.floor((height * maxDim) / width); width = maxDim; }
+          else { width = Math.floor((width * maxDim) / height); height = maxDim; }
+        }
+        
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return resolve(file);
+        
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => blob ? resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" })) : resolve(file),
+          "image/jpeg",
+          0.85
+        );
+      };
+      img.onerror = () => resolve(file);
+      if (e.target?.result) img.src = e.target.result as string;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+};
+
 export default function ConvertPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [targetFormat, setTargetFormat] = useState<ImageFormat>("webp");
@@ -64,22 +104,32 @@ export default function ConvertPage() {
     setIsSubmitting(true);
     setJobStatus("processing");
 
-    // Client-side HEIC pre-conversion
+    // Client-side HEIC pre-conversion & Limit Compression bounds
     const processedFiles: File[] = [];
     for (const file of files) {
+      let finalFile = file;
+
       if (file.name.toLowerCase().endsWith(".heic") || file.type === "image/heic") {
         try {
           const heic2any = (await import("heic2any")).default;
           const blob = await heic2any({ blob: file, toType: "image/png" }) as Blob;
-          const converted = new File([blob], file.name.replace(/\.heic$/i, ".png"), { type: "image/png" });
-          processedFiles.push(converted);
+          finalFile = new File([blob], file.name.replace(/\.heic$/i, ".png"), { type: "image/png" });
           toast(`HEIC → PNG: ${file.name}`, "info");
         } catch {
-          processedFiles.push(file);
+          // fallback to original if heic failed
         }
-      } else {
-        processedFiles.push(file);
       }
+
+      if (finalFile.size > 4000000 && !finalFile.type.includes("svg")) {
+        try {
+          finalFile = await compressImageLocally(finalFile);
+          if (finalFile.size < file.size) toast(`Slightly downscaled ${file.name} to bypass cloud limits`, "info");
+        } catch (e) {
+          console.error("Compression bypass failed", e);
+        }
+      }
+
+      processedFiles.push(finalFile);
     }
 
     const initialProgresses: LocalFileProgress[] = processedFiles.map((f, i) => ({

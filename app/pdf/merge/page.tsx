@@ -8,6 +8,7 @@ import { toast } from "../../../components/ui/Toast";
 import { v4 as uuidv4 } from "uuid";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import PageThumbnail from "../../../components/pdf/PageThumbnail";
+import { mergePDFsClient } from "../../../lib/client-pdf-manager";
 
 interface MergeFile {
   id: string;
@@ -72,21 +73,14 @@ export default function PDFMergePage() {
     setDownloadUrl(null);
     
     try {
-      const formData = new FormData();
-      formData.append("action", "merge");
-      files.forEach((f) => formData.append("files", f.file));
-
-      const res = await fetch("/api/process-pdf", { method: "POST", body: formData });
-      if (!res.ok) {
-        const errData = await res.json().catch(()=>({}));
-        throw new Error(errData.error || "Upload rejected");
-      }
+      const buffers = files.map(f => f.buffer);
+      const mergedBytes = await mergePDFsClient(buffers);
       
-      const blob = await res.blob();
+      const blob = new Blob([mergedBytes as unknown as BlobPart], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       setDownloadUrl(url);
       
-      toast(`Merged ${files.length} PDFs successfully!`, "success");
+      toast(`Merged ${files.length} PDFs locally!`, "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Merge failed", "error");
     } finally {

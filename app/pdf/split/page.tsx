@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FileMinus, Scissors, Download, RefreshCw, CheckCircle, AlertCircle, Info } from "lucide-react";
 import DropZone from "@/components/ui/DropZone";
 import { toast } from "@/components/ui/Toast";
+import JSZip from "jszip";
+import { splitPDFClient, parsePageRangesClient, getPageCountClient } from "@/lib/client-pdf-manager";
 
 export default function PDFSplitPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -32,22 +34,22 @@ export default function PDFSplitPage() {
     setDownloadUrl(null);
 
     try {
-      const formData = new FormData();
-      formData.append("action", "split");
-      formData.append("file", file);
-      formData.append("ranges", splitAll ? "" : ranges);
+      const ab = await file.arrayBuffer();
+      const totalPages = await getPageCountClient(ab);
+      const parsedRanges = parsePageRangesClient(splitAll ? "" : ranges, totalPages);
+      
+      const parts = await splitPDFClient(ab, parsedRanges);
 
-      const res = await fetch("/api/process-pdf", { method: "POST", body: formData });
-      if (!res.ok) {
-        const errData = await res.json().catch(()=>({}));
-        throw new Error(errData.error || "Network error");
-      }
+      const zip = new JSZip();
+      parts.forEach((part, i) => {
+        zip.file(`part_${i + 1}.pdf`, part);
+      });
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(zipBlob);
       setDownloadUrl(url);
 
-      toast("PDF split into zip file successfully!", "success");
+      toast("PDF split into zip file locally!", "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Split failed", "error");
     } finally {

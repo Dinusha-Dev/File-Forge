@@ -7,6 +7,7 @@ import DropZone from "../../../components/ui/DropZone";
 import PageOrganizer, { PageGroup, PageItem } from "../../../components/pdf/PageOrganizer";
 import { toast } from "../../../components/ui/Toast";
 import { v4 as uuidv4 } from "uuid";
+import { advancedReorderClient } from "../../../lib/client-pdf-manager";
 
 interface SourceFile {
   id: string;
@@ -120,22 +121,14 @@ export default function PDFOrganizePage() {
           });
       });
       
-      const formData = new FormData();
-      formData.append("action", "advanced-reorder");
-      sourceFiles.forEach(sf => formData.append("files", sf.file));
-      formData.append("layout", JSON.stringify(layout));
-
-      const res = await fetch("/api/process-pdf", { method: "POST", body: formData });
-      if (!res.ok) {
-        const errData = await res.json().catch(()=>({}));
-        throw new Error(errData.error || "Compilation failed");
-      }
+      const buffers = sourceFiles.map(sf => pdfDataMap[sf.id]);
+      const mergedBytes = await advancedReorderClient(buffers, layout);
       
-      const blob = await res.blob();
+      const blob = new Blob([mergedBytes as unknown as BlobPart], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       setDownloadUrl(url);
 
-      toast("Master PDF compiled successfully!", "success");
+      toast("Master PDF compiled locally!", "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Save failed", "error");
     } finally {

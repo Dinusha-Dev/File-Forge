@@ -32,7 +32,7 @@ export default function PageOrganizer({ groups, pdfDataMap, onReorder, onToggle 
     if (!destination) return;
 
     const newGroups = [...groups];
-    
+
     const sourceGroupIndex = newGroups.findIndex(g => g.id === source.droppableId);
     const destGroupIndex = newGroups.findIndex(g => g.id === destination.droppableId);
 
@@ -40,8 +40,8 @@ export default function PageOrganizer({ groups, pdfDataMap, onReorder, onToggle 
 
     // Isolate clones to avoid state mutation
     const sourceGroup = { ...newGroups[sourceGroupIndex], pages: [...newGroups[sourceGroupIndex].pages] };
-    const destGroup = source.droppableId === destination.droppableId 
-      ? sourceGroup 
+    const destGroup = source.droppableId === destination.droppableId
+      ? sourceGroup
       : { ...newGroups[destGroupIndex], pages: [...newGroups[destGroupIndex].pages] };
 
     // Move the item
@@ -63,7 +63,7 @@ export default function PageOrganizer({ groups, pdfDataMap, onReorder, onToggle 
 
           return (
             <div key={group.id} className="space-y-2">
-              
+
               {/* Group Header */}
               <div className="flex items-center justify-between px-2">
                 <h3 className="text-sm font-semibold text-white/90 truncate max-w-sm">
@@ -78,11 +78,10 @@ export default function PageOrganizer({ groups, pdfDataMap, onReorder, onToggle 
                   <div
                     ref={droppableProvided.innerRef}
                     {...droppableProvided.droppableProps}
-                    className={`flex flex-wrap gap-4 p-4 rounded-xl border-2 border-dashed min-h-[200px] transition-colors ${
-                      droppableSnapshot.isDraggingOver
-                        ? "border-accent-violet/50 bg-accent-violet/5"
-                        : "border-border bg-surface-2"
-                    }`}
+                    className={`flex flex-wrap gap-4 p-4 rounded-xl border-2 border-dashed min-h-[200px] transition-colors ${droppableSnapshot.isDraggingOver
+                      ? "border-accent-violet/50 bg-accent-violet/5"
+                      : "border-border bg-surface-2"
+                      }`}
                   >
                     {group.pages.map((page, i) => (
                       <Draggable key={page.id} draggableId={page.id} index={i}>
@@ -90,30 +89,27 @@ export default function PageOrganizer({ groups, pdfDataMap, onReorder, onToggle 
                           <div
                             ref={draggableProvided.innerRef}
                             {...draggableProvided.draggableProps}
-                            className={`relative flex flex-col items-center group ${
-                              draggableSnapshot.isDragging ? "z-50" : ""
-                            }`}
+                            className={`relative flex flex-col items-center group ${draggableSnapshot.isDragging ? "z-50" : ""
+                              }`}
                           >
                             <div
                               {...draggableProvided.dragHandleProps}
-                              className={`flex flex-col items-center gap-2 cursor-grab active:cursor-grabbing w-full h-full relative transition-all duration-300 ${
-                                page.isDisabled ? "opacity-40 grayscale" : "opacity-100"
-                              }`}
+                              className={`flex flex-col items-center gap-2 cursor-grab active:cursor-grabbing w-full h-full relative transition-all duration-300 ${page.isDisabled ? "opacity-40 grayscale" : "opacity-100"
+                                }`}
                             >
                               {/* Thumbnail */}
                               <div
-                                className={`relative rounded-xl overflow-hidden border-2 transition-all duration-200 ${
-                                  draggableSnapshot.isDragging
-                                    ? "border-accent-violet shadow-glow-violet rotate-2 scale-105"
-                                    : page.isDisabled 
-                                      ? "border-border"
-                                      : "border-border-subtle hover:border-accent-violet/40"
-                                }`}
+                                className={`relative rounded-xl overflow-hidden border-2 transition-all duration-200 ${draggableSnapshot.isDragging
+                                  ? "border-accent-violet shadow-glow-violet rotate-2 scale-105"
+                                  : page.isDisabled
+                                    ? "border-border"
+                                    : "border-border-subtle hover:border-accent-violet/40"
+                                  }`}
                               >
                                 {page.isDisabled ? (
-                                  <button 
+                                  <button
                                     onClick={(e) => {
-                                      e.stopPropagation(); 
+                                      e.stopPropagation();
                                       onToggle(page.id, group.id);
                                     }}
                                     className="absolute top-2 right-2 z-30 w-7 h-7 rounded-full bg-zinc-900 shadow-[0_4px_12px_rgba(0,0,0,0.5)] border border-emerald-500/50 flex items-center justify-center text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all scale-110"
@@ -122,9 +118,9 @@ export default function PageOrganizer({ groups, pdfDataMap, onReorder, onToggle 
                                     <Plus className="w-4 h-4" />
                                   </button>
                                 ) : (
-                                  <button 
+                                  <button
                                     onClick={(e) => {
-                                      e.stopPropagation(); 
+                                      e.stopPropagation();
                                       onToggle(page.id, group.id);
                                     }}
                                     className="absolute top-2 right-2 z-30 w-7 h-7 rounded-full bg-zinc-900 shadow-[0_4px_12px_rgba(0,0,0,0.5)] border border-white/20 flex items-center justify-center text-white hover:bg-accent-rose hover:border-accent-rose hover:text-white transition-all"

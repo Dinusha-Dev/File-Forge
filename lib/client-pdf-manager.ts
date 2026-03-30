@@ -5,7 +5,7 @@ export interface PageRange {
   end: number;
 }
 
-export async function mergePDFs(buffers: Buffer[]): Promise<Buffer> {
+export async function mergePDFsClient(buffers: ArrayBuffer[]): Promise<Uint8Array> {
   const mergedDoc = await PDFDocument.create();
 
   for (const buf of buffers) {
@@ -15,16 +15,16 @@ export async function mergePDFs(buffers: Buffer[]): Promise<Buffer> {
   }
 
   const bytes = await mergedDoc.save();
-  return Buffer.from(bytes);
+  return bytes;
 }
 
-export async function splitPDF(
-  buffer: Buffer,
+export async function splitPDFClient(
+  buffer: ArrayBuffer,
   ranges: PageRange[]
-): Promise<Buffer[]> {
+): Promise<Uint8Array[]> {
   const srcDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
   const totalPages = srcDoc.getPageCount();
-  const results: Buffer[] = [];
+  const results: Uint8Array[] = [];
 
   for (const range of ranges) {
     const start = Math.max(1, range.start);
@@ -37,41 +37,24 @@ export async function splitPDF(
     copied.forEach((page) => newDoc.addPage(page));
 
     const bytes = await newDoc.save();
-    results.push(Buffer.from(bytes));
+    results.push(bytes);
   }
 
   return results;
 }
 
-export async function reorderPages(
-  buffer: Buffer,
-  newOrder: number[] // 0-indexed page numbers in desired order
-): Promise<Buffer> {
-  const srcDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
-  const newDoc = await PDFDocument.create();
-
-  const validOrder = newOrder.filter(
-    (i) => i >= 0 && i < srcDoc.getPageCount()
-  );
-  const copied = await newDoc.copyPages(srcDoc, validOrder);
-  copied.forEach((page) => newDoc.addPage(page));
-
-  const bytes = await newDoc.save();
-  return Buffer.from(bytes);
-}
-
-export async function advancedReorder(
-  buffers: Buffer[],
+export async function advancedReorderClient(
+  buffers: ArrayBuffer[],
   layout: { fileIndex: number; pageIndex: number }[]
-): Promise<Buffer> {
-  // Load all source documents into memory
+): Promise<Uint8Array> {
+  // Load all source documents directly into browser memory
   const docs = await Promise.all(
     buffers.map((buf) => PDFDocument.load(buf, { ignoreEncryption: true }))
   );
   
   const newDoc = await PDFDocument.create();
 
-  // Iterate exactly over the specified layout order mapping
+  // Iterate exactly over the specified layout order mapping logically without file IO
   for (const step of layout) {
     if (step.fileIndex < 0 || step.fileIndex >= docs.length) continue;
     const srcDoc = docs[step.fileIndex];
@@ -82,15 +65,15 @@ export async function advancedReorder(
   }
 
   const bytes = await newDoc.save();
-  return Buffer.from(bytes);
+  return bytes;
 }
 
-export async function getPageCount(buffer: Buffer): Promise<number> {
+export async function getPageCountClient(buffer: ArrayBuffer): Promise<number> {
   const doc = await PDFDocument.load(buffer, { ignoreEncryption: true });
   return doc.getPageCount();
 }
 
-export function parsePageRanges(rangeStr: string, totalPages: number): PageRange[] {
+export function parsePageRangesClient(rangeStr: string, totalPages: number): PageRange[] {
   const ranges: PageRange[] = [];
   const parts = rangeStr.split(",").map((s) => s.trim());
 
