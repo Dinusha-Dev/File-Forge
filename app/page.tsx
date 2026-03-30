@@ -175,12 +175,12 @@ export default function DashboardPage() {
           {modules.map((mod) => (
             <Link key={mod.href} href={mod.href}>
               <div
-                className={`group relative overflow-hidden rounded-2xl bg-surface-1 border border-border-subtle hover:border-white/10 p-5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer`}
+                className="group relative overflow-hidden rounded-2xl bg-surface-1 border border-border-subtle hover:border-white/10 p-5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer flex flex-col h-[110px]"
               >
                 {/* Gradient top accent stripe */}
                 <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${mod.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-1 min-h-0">
                   {/* Icon */}
                   <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${mod.gradient} flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-105 transition-transform duration-200`}>
                     <mod.icon className="w-5 h-5 text-white" strokeWidth={1.75} />
@@ -195,25 +195,30 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <p className="text-xs text-white/40 leading-relaxed line-clamp-2">{mod.description}</p>
-                    {mod.formats.length > 0 && (
-                      <div className="flex items-center gap-1 mt-2.5 flex-wrap">
-                        {mod.formats.map((fmt) => (
-                          <span key={fmt} className="text-[10px] px-1.5 py-0.5 rounded bg-surface-3 text-white/50 font-mono border border-border-subtle">
-                            {fmt}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
                   {/* Arrow */}
                   <ArrowRight className="w-4 h-4 text-white/15 group-hover:text-white/50 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                </div>
+
+                {/* Format tags row — always same fixed height (8px gap + tags or empty) */}
+                <div className="h-7 flex items-end">
+                  {mod.formats.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {mod.formats.map((fmt) => (
+                        <span key={fmt} className="text-[10px] px-1.5 py-0.5 rounded bg-surface-3 text-white/50 font-mono border border-border-subtle">
+                          {fmt}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </Link>
           ))}
         </div>
       </div>
+
 
 
       {/* Perks */}
