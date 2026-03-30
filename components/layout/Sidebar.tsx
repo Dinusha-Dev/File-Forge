@@ -42,12 +42,12 @@ export default function Sidebar() {
     <aside className="fixed left-0 top-0 h-full w-64 bg-surface-1 border-r border-border-subtle flex flex-col z-50">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-border-subtle">
-        <div className="w-9 h-9 flex items-center justify-center flex-shrink-0 relative">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-b from-surface-2 to-surface-3 border border-white/10 flex items-center justify-center flex-shrink-0 relative shadow-sm overflow-hidden">
           <Image 
             src="/File Forge Logo.svg" 
             alt="File Forge Logo" 
-            width={36}
-            height={36}
+            width={26}
+            height={26}
             className="object-contain"
             priority
           />
