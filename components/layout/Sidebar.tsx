@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -42,15 +41,22 @@ export default function Sidebar() {
     <aside className="fixed left-0 top-0 h-full w-64 bg-surface-1 border-r border-border-subtle flex flex-col z-50">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-border-subtle">
-        <div className="w-9 h-9 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(139,92,246,0.5)] border border-accent-violet/30 flex-shrink-0 relative">
-          <Image 
-            src="/file-forge-logo.png" 
-            alt="File Forge Logo" 
-            priority
-            fill
-            sizes="36px"
-            className="object-cover scale-110" 
-          />
+        <div className="w-9 h-9 rounded-xl overflow-hidden bg-zinc-900 border border-blue-600/30 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(37,99,235,0.4)] relative">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            className="w-5 h-5"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M13.8 2.2C13.4 1.8 12.8 1.8 12.3 2.1L3.3 9.4C2.7 9.8 2.6 10.6 3 11.1L8.3 17H4.5C3.7 17 3.3 17.8 3.7 18.5L11.7 23.8C12.1 24.1 12.7 24.1 13.2 23.7L22.2 16.4C22.8 15.9 22.9 15.2 22.5 14.7L17.2 8.8H21C21.8 8.8 22.2 7.9 21.8 7.3L13.8 2.2Z"
+              fill="#1e3a8a"
+              stroke="#2563eb"
+              strokeWidth="2.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </svg>
         </div>
         <div>
           <span className="text-sm font-bold text-white tracking-tight">File Forge</span>
