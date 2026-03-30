@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -16,8 +17,7 @@ import {
   FileSpreadsheet,
   ScanText,
   Stamp,
-  Eraser,
-  Anvil
+  Eraser
 } from "lucide-react";
 
 const navItems = [
@@ -42,8 +42,15 @@ export default function Sidebar() {
     <aside className="fixed left-0 top-0 h-full w-64 bg-surface-1 border-r border-border-subtle flex flex-col z-50">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-border-subtle">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-violet to-accent-cyan flex items-center justify-center shadow-glow-violet">
-          <Anvil className="w-4 h-4 text-white" strokeWidth={2.5} />
+        <div className="w-9 h-9 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(139,92,246,0.5)] border border-accent-violet/30 flex-shrink-0 relative">
+          <Image 
+            src="/file-forge-logo.png" 
+            alt="File Forge Logo" 
+            priority
+            fill
+            sizes="36px"
+            className="object-cover scale-110" 
+          />
         </div>
         <div>
           <span className="text-sm font-bold text-white tracking-tight">File Forge</span>
