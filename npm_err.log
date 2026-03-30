@@ -1,0 +1,94 @@
+﻿npm : npm error code 
+ERESOLVE
+At line:1 char:1
++ npm i > npm_error.log 
+2>&1
++ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (n  
+  pm error code ERESOLV   
+ E:String) [], RemoteE    
+xception
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+npm error ERESOLVE could 
+not resolve
+npm error
+npm error While 
+resolving: 
+@hello-pangea/dnd@16.6.0
+npm error Found: 
+react@19.2.4
+npm error 
+node_modules/react
+npm error   
+react@"^19.0.0" from the 
+root project
+npm error   peerOptional 
+react@"^18.0.0 || 
+^19.0.0" from 
+framer-motion@11.18.2
+npm error   
+node_modules/framer-motion
+npm error     
+framer-motion@"^11.11.17" 
+from the root project
+npm error   5 more 
+(lucide-react, next, 
+react-dom, styled-jsx, 
+use-sync-external-store)
+npm error
+npm error Could not 
+resolve dependency:
+npm error peer 
+react@"^16.8.5 || ^17.0.0 
+|| ^18.0.0" from 
+@hello-pangea/dnd@16.6.0
+npm error node_modules/@he
+llo-pangea/dnd
+npm error   @hello-pangea/
+dnd@"^16.6.0" from the 
+root project
+npm error
+npm error Conflicting 
+peer dependency: 
+react@18.3.1
+npm error 
+node_modules/react
+npm error   peer 
+react@"^16.8.5 || ^17.0.0 
+|| ^18.0.0" from 
+@hello-pangea/dnd@16.6.0
+npm error   node_modules/@
+hello-pangea/dnd
+npm error     @hello-pange
+a/dnd@"^16.6.0" from the 
+root project
+npm error
+npm error Fix the 
+upstream dependency 
+conflict, or retry
+npm error this command 
+with --force or 
+--legacy-peer-deps
+npm error to accept an 
+incorrect (and 
+potentially broken) 
+dependency resolution.
+npm error
+npm error
+npm error For a full 
+report see:
+npm error C:\Users\ASUS\Ap
+pData\Local\npm-cache\_log
+s\2026-03-30T08_11_02_918Z
+-eresolve-report.txt
+npm error A complete log 
+of this run can be found 
+in: C:\Users\ASUS\AppData\
+Local\npm-cache\_logs\2026
+-03-30T08_11_02_918Z-debug
+-0.log

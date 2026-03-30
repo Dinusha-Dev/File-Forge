@@ -25,9 +25,8 @@ export async function convertImagesAction(formData: FormData) {
 
   createJob(jobId, "image-convert", fileEntries);
 
-  // Process asynchronously using setImmediate chain
-  setImmediate(async () => {
-    for (let i = 0; i < files.length; i++) {
+  // Execute synchronously within the Server Action to prevent Vercel Lambda freeze
+  for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const fileKey = `file_${i}`;
       const outputName = `${file.name.replace(/\.[^.]+$/, "")}.${ext}`;
@@ -59,8 +58,6 @@ export async function convertImagesAction(formData: FormData) {
         });
       }
     }
-  });
-
   return { jobId, fileCount: files.length };
 }
 

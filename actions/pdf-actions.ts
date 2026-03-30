@@ -17,8 +17,8 @@ export async function mergePDFsAction(formData: FormData) {
     { filename: "merged.pdf", originalName: "merged.pdf" },
   ]);
 
-  setImmediate(async () => {
-    try {
+  // Execute synchronously to block Server Action safely
+  try {
       updateJob(jobId, { status: "processing" });
 
       const buffers: Buffer[] = [];
@@ -50,7 +50,6 @@ export async function mergePDFsAction(formData: FormData) {
         error: err instanceof Error ? err.message : "Merge failed",
       });
     }
-  });
 
   return { jobId };
 }
@@ -66,8 +65,8 @@ export async function splitPDFAction(formData: FormData) {
     { filename: "splitting", originalName: file.name },
   ]);
 
-  setImmediate(async () => {
-    try {
+  // Execute synchronously 
+  try {
       updateJob(jobId, { status: "processing" });
 
       const ab = await file.arrayBuffer();
@@ -95,7 +94,6 @@ export async function splitPDFAction(formData: FormData) {
         error: err instanceof Error ? err.message : "Split failed",
       });
     }
-  });
 
   return { jobId };
 }
@@ -115,8 +113,8 @@ export async function reorderPDFAction(formData: FormData) {
     { filename: "reordered.pdf", originalName: file.name },
   ]);
 
-  setImmediate(async () => {
-    try {
+  // Execute synchronously 
+  try {
       updateJob(jobId, { status: "processing" });
 
       const ab = await file.arrayBuffer();
@@ -143,7 +141,6 @@ export async function reorderPDFAction(formData: FormData) {
         error: err instanceof Error ? err.message : "Reorder failed",
       });
     }
-  });
 
   return { jobId };
 }
@@ -168,8 +165,8 @@ export async function advancedReorderAction(formData: FormData) {
     { filename: "organized.pdf", originalName: "organized.pdf" },
   ]);
 
-  setImmediate(async () => {
-    try {
+  // Execute synchronously 
+  try {
       updateJob(jobId, { status: "processing" });
 
       const buffers: Buffer[] = [];
@@ -200,7 +197,6 @@ export async function advancedReorderAction(formData: FormData) {
         error: err instanceof Error ? err.message : "Advanced Reorder failed",
       });
     }
-  });
 
   return { jobId };
 }

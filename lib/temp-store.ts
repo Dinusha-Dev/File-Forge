@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 
-const TMP_DIR = path.join(process.cwd(), "tmp");
+const TMP_DIR = path.join(os.tmpdir(), "universal-file-hub");
 const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
 
 // Ensure tmp directory exists
