@@ -170,42 +170,51 @@ export default function DashboardPage() {
 
       {/* Module Cards */}
       <div>
-        <h2 className="text-xs font-semibold text-white/30 uppercase tracking-widest mb-4">Feature Modules</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <h2 className="text-xs font-semibold text-white/30 uppercase tracking-widest mb-5">Feature Modules</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {modules.map((mod) => (
             <Link key={mod.href} href={mod.href}>
               <div
-                className={`group relative overflow-hidden rounded-2xl bg-surface-1 border border-border-subtle hover:border-border p-6 transition-all duration-300 hover:-translate-y-0.5 hover:${mod.glow}`}
+                className={`group relative overflow-hidden rounded-2xl bg-surface-1 border border-border-subtle hover:border-white/10 p-5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer`}
               >
-                <div className="flex items-start gap-4">
-                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${mod.gradient} flex items-center justify-center flex-shrink-0 shadow-lg`}>
-                    <mod.icon className="w-5 h-5 text-white" />
+                {/* Gradient top accent stripe */}
+                <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${mod.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+
+                <div className="flex items-center gap-4">
+                  {/* Icon */}
+                  <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${mod.gradient} flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-105 transition-transform duration-200`}>
+                    <mod.icon className="w-5 h-5 text-white" strokeWidth={1.75} />
                   </div>
+
+                  {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-sm font-semibold text-white">{mod.title}</h3>
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${mod.badgeColor}`}>
+                      <h3 className="text-sm font-semibold text-white truncate">{mod.title}</h3>
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex-shrink-0 ${mod.badgeColor}`}>
                         {mod.badge}
                       </span>
                     </div>
-                    <p className="text-xs text-white/40 leading-relaxed">{mod.description}</p>
+                    <p className="text-xs text-white/40 leading-relaxed line-clamp-2">{mod.description}</p>
                     {mod.formats.length > 0 && (
-                      <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                      <div className="flex items-center gap-1 mt-2.5 flex-wrap">
                         {mod.formats.map((fmt) => (
-                          <span key={fmt} className="text-[10px] px-2 py-0.5 rounded-md bg-surface-3 text-white/50 font-mono">
+                          <span key={fmt} className="text-[10px] px-1.5 py-0.5 rounded bg-surface-3 text-white/50 font-mono border border-border-subtle">
                             {fmt}
                           </span>
                         ))}
                       </div>
                     )}
                   </div>
-                  <ArrowRight className="w-4 h-4 text-white/20 group-hover:text-white/60 group-hover:translate-x-1 transition-all flex-shrink-0" />
+
+                  {/* Arrow */}
+                  <ArrowRight className="w-4 h-4 text-white/15 group-hover:text-white/50 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                 </div>
               </div>
             </Link>
           ))}
         </div>
       </div>
+
 
       {/* Perks */}
       <div className="grid grid-cols-3 gap-4">
