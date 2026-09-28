@@ -17,7 +17,8 @@ import {
   FileSpreadsheet,
   ScanText,
   Stamp,
-  Eraser
+  Eraser,
+  Minimize2
 } from "lucide-react";
 
 const navItems = [
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/convert", icon: ImageIcon, label: "Image Converter" },
   { href: "/image/extract-text", icon: ScanText, label: "Image OCR" },
   { href: "/image/remove-background", icon: Eraser, label: "BG Remover" },
+  { href: "/image/compress", icon: Minimize2, label: "Image Compress" },
   { href: "/pdf/merge", icon: FileStack, label: "PDF Merge" },
   { href: "/pdf/split", icon: FileMinus, label: "PDF Split" },
   { href: "/pdf/organize", icon: GripVertical, label: "PDF Organize" },

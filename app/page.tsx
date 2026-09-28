@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ImageIcon, FileStack, FileMinus, GripVertical, ArrowRight, Zap, Shield, Clock, ImageDown, ImagePlus, FileText, FileSpreadsheet, ScanText, Stamp, Eraser } from "lucide-react";
+import { ImageIcon, FileStack, FileMinus, GripVertical, ArrowRight, Zap, Shield, Clock, ImageDown, ImagePlus, FileText, FileSpreadsheet, ScanText, Stamp, Eraser, Minimize2 } from "lucide-react";
 
 const modules = [
   {
@@ -67,6 +67,17 @@ const modules = [
     badge: "Module A · 2",
     badgeColor: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30",
     formats: ["ENG", "SPA", "FRA", "DEU"],
+  },
+  {
+    href: "/image/compress",
+    icon: Minimize2,
+    title: "Image Compression",
+    description: "Smart client-side image compression to reduce file size without losing visual quality.",
+    gradient: "from-sky-500 to-indigo-600",
+    glow: "shadow-[0_0_30px_rgba(14,165,233,0.25)]",
+    badge: "Module A · 3",
+    badgeColor: "bg-sky-500/20 text-sky-300 border-sky-500/30",
+    formats: ["JPG", "PNG", "WEBP"],
   },
   {
     href: "/pdf/pdf-to-image",
