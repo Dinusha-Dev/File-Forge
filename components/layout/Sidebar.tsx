@@ -10,7 +10,6 @@ import {
   FileStack,
   FileMinus,
   GripVertical,
-  Zap,
   ImageDown,
   ImagePlus,
   FileText,

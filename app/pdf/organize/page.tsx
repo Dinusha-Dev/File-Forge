@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { GripVertical as GripIcon, Save, Download, RefreshCw, CheckCircle, AlertCircle, Plus } from "lucide-react";
+import { GripVertical as GripIcon, Save, Download, RefreshCw, CheckCircle, Plus } from "lucide-react";
 import DropZone from "../../../components/ui/DropZone";
 import PageOrganizer, { PageGroup, PageItem } from "../../../components/pdf/PageOrganizer";
 import { toast } from "../../../components/ui/Toast";

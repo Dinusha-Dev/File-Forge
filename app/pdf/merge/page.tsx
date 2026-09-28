@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileStack, Merge, Download, RefreshCw, AlertCircle, CheckCircle, X, Plus } from "lucide-react";
+import { FileStack, Merge, Download, RefreshCw, CheckCircle, X, Plus } from "lucide-react";
 import DropZone from "../../../components/ui/DropZone";
 import { toast } from "../../../components/ui/Toast";
 import { v4 as uuidv4 } from "uuid";

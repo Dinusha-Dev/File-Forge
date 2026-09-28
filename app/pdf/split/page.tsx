@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileMinus, Scissors, Download, RefreshCw, CheckCircle, AlertCircle, Info } from "lucide-react";
+import { FileMinus, Scissors, Download, RefreshCw, CheckCircle, Info } from "lucide-react";
 import DropZone from "@/components/ui/DropZone";
 import { toast } from "@/components/ui/Toast";
 import JSZip from "jszip";
